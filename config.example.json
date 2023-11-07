@@ -1,0 +1,47 @@
+{
+    "app": {
+        "name": "goyave.dev/template",
+        "environment": "localhost",
+        "debug": true,
+        "defaultLanguage": "en-US"
+    },
+    "server": {
+        "host": "127.0.0.1",
+        "domain": "",
+        "port": 8080,
+        "writeTimeout": 10,
+        "readTimeout": 10,
+        "idleTimeout": 20,
+        "websocketTimeout": 10,
+        "maxUploadSize": 10,
+        "proxy": {
+            "protocol": "http",
+            "host": "",
+            "port": 80,
+            "base": ""
+        }
+    },
+    "database": {
+        "connection": "sqlite3",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "name": "goyave.db",
+        "username": "",
+        "password": "",
+        "options": "mode=memory",
+        "maxOpenConnections": 20,
+        "maxIdleConnections": 20,
+        "maxLifetime": 300,
+        "defaultReadQueryTimeout": 20000,
+        "defaultWriteQueryTimeout": 40000,
+        "config": {
+            "skipDefaultTransaction": false,
+            "dryRun": false,
+            "prepareStmt": true,
+            "disableNestedTransaction": false,
+            "allowGlobalUpdate": false,
+            "disableAutomaticPing": false,
+            "disableForeignKeyConstraintWhenMigrating": false
+        }
+    }
+}
