@@ -1,39 +1,59 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"os"
 
 	"goyave.dev/template/database/model"
 	"goyave.dev/template/database/repository"
 	"goyave.dev/template/http/route"
+	"goyave.dev/template/service/book"
 	"goyave.dev/template/service/user"
 
 	"goyave.dev/goyave/v5"
 	"goyave.dev/goyave/v5/database"
 	"goyave.dev/goyave/v5/util/errors"
+	"goyave.dev/goyave/v5/util/fsutil"
 
 	// Import the appropriate GORM dialect for the database you're using.
 	// _ "goyave.dev/goyave/v5/database/dialect/mysql"
-	// _ "goyave.dev/goyave/v5/database/dialect/postgres"
-	_ "goyave.dev/goyave/v5/database/dialect/sqlite"
+	_ "goyave.dev/goyave/v5/database/dialect/postgres"
+	// _ "goyave.dev/goyave/v5/database/dialect/sqlite"
 	// _ "goyave.dev/goyave/v5/database/dialect/mssql"
 )
 
+//go:embed resources
+var resources embed.FS
+
 func main() {
 
-	server, err := goyave.New()
+	opts := goyave.Options{
+		LangFS: fsutil.Embed{FS: resources},
+	}
+
+	server, err := goyave.New(opts)
 	if err != nil {
-		fmt.Println(err.(*errors.Error).String())
+		fmt.Fprintln(os.Stderr, err.(*errors.Error).String())
+		fmt.Fprintln(os.Stderr, "%w", err)
 		os.Exit(1)
 	}
 
-	if err := server.DB().AutoMigrate(&model.User{}); err != nil {
+	// dirty hack to avoid the reloader to spam the db.
+	isFirstRun := !(server.DB().Migrator().HasTable(&model.User{}))
+
+	if err := server.DB().AutoMigrate(
+		&model.User{},
+		&model.Book{},
+	); err != nil {
 		server.Logger.Error(errors.New(err))
 		os.Exit(2)
 	}
-	factory := database.NewFactory(model.UserGenerator)
-	factory.Save(server.DB(), 21)
+
+	if isFirstRun {
+		factory := database.NewFactory(model.UserGenerator)
+		factory.Save(server.DB(), 21)
+	}
 
 	server.Logger.Info("Registering hooks")
 	server.RegisterSignalHook()
@@ -63,4 +83,8 @@ func registerServices(server *goyave.Server) {
 	userRepository := repository.NewUser(server.DB())
 	userService := user.NewService(userRepository)
 	server.RegisterService(userService)
+
+	bookRepository := repository.NewBookSQL(server.DB())
+	bookService := book.NewService(bookRepository)
+	server.RegisterService(bookService)
 }

@@ -6,9 +6,9 @@
         "defaultLanguage": "en-US"
     },
     "server": {
-        "host": "127.0.0.1",
+        "host": "0.0.0.0",
         "domain": "",
-        "port": 0,
+        "port": 8080,
         "writeTimeout": 10,
         "readTimeout": 10,
         "idleTimeout": 20,
@@ -23,8 +23,8 @@
     },
     "database": {
         "connection": "postgres",
-        "host": "127.0.0.1",
-        "port": 35432,
+        "host": "db",
+        "port": 5432,
         "name": "goyave",
         "username": "goyave",
         "password": "example",

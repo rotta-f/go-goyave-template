@@ -2,37 +2,47 @@ package user
 
 import (
 	"net/http"
-	"strconv"
 
 	"goyave.dev/goyave/v5"
-	"goyave.dev/goyave/v5/cors"
 	"goyave.dev/goyave/v5/database"
 	"goyave.dev/goyave/v5/util/typeutil"
+	"goyave.dev/template/database/model"
+	"goyave.dev/template/http/controller/book"
 	"goyave.dev/template/http/dto"
+	"goyave.dev/template/http/route/extra"
 	"goyave.dev/template/service"
 	"goyave.dev/template/service/user"
 )
 
-type UserController struct {
-	goyave.Component
-	UserService *user.Service
+type Service interface {
+	First(id int64) (*model.User, error)
+	Paginate(page int, pageSize int) (*database.Paginator[*model.User], error)
 }
 
-func (ctrl *UserController) Init(server *goyave.Server) {
+type Controller struct {
+	goyave.Component
+	UserService Service
+}
+
+func (ctrl *Controller) Init(server *goyave.Server) {
 	ctrl.UserService = server.Service(service.User).(*user.Service)
 	ctrl.Component.Init(server)
 }
 
-func (ctrl *UserController) RegisterRoutes(router *goyave.Router) {
+func (ctrl *Controller) RegisterRoutes(router *goyave.Router) {
 	subrouter := router.Subrouter("/users")
-	subrouter.CORS(cors.Default())
 
 	subrouter.Get("/", ctrl.Index).ValidateQuery(IndexRequest)
-	subrouter.Get("/{userId:[0-9+]}", ctrl.Show)
+
+	byId := subrouter.Subrouter("/{userId:[0-9+]}")
+	byId.Middleware(&Middleware{})
+	byId.Get("/", ctrl.Show)
+
+	byId.Controller(&book.Controller{})
 }
 
-func (ctrl *UserController) Index(response *goyave.Response, request *goyave.Request) {
-
+func (ctrl *Controller) Index(response *goyave.Response, request *goyave.Request) {
+	ctrl.Logger().Info("Indexing users")
 	query := typeutil.MustConvert[dto.Index](request.Query)
 
 	paginator, err := ctrl.UserService.Paginate(query.Page.Default(1), query.PerPage.Default(20))
@@ -45,18 +55,8 @@ func (ctrl *UserController) Index(response *goyave.Response, request *goyave.Req
 	response.JSON(http.StatusOK, dto)
 }
 
-func (ctrl *UserController) Show(response *goyave.Response, request *goyave.Request) {
-
-	userID, err := strconv.ParseInt(request.RouteParams["userId"], 10, 64)
-	if err != nil {
-		response.Status(http.StatusNotFound)
-		return
-	}
-
-	user, err := ctrl.UserService.First(userID)
-	if response.WriteDBError(err) {
-		return
-	}
+func (ctrl *Controller) Show(response *goyave.Response, request *goyave.Request) {
+	user := extra.GetParamsUser(request)
 
 	response.JSON(http.StatusOK, user)
 }
